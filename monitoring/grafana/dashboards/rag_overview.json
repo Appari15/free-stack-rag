@@ -1,0 +1,90 @@
+{
+  "dashboard": {
+    "title": "RAG System Overview",
+    "uid": "rag-overview",
+    "panels": [
+      {
+        "title": "Queries per Minute",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(rag_queries_total[1m]) * 60",
+            "legendFormat": "{{search_mode}}"
+          }
+        ]
+      },
+      {
+        "title": "Query Latency (p50 / p95)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(rag_query_latency_ms_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(rag_query_latency_ms_bucket[5m]))",
+            "legendFormat": "p95"
+          }
+        ]
+      },
+      {
+        "title": "Documents Indexed",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+        "targets": [
+          {"expr": "rag_documents_indexed"}
+        ]
+      },
+      {
+        "title": "Total Queries",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+        "targets": [
+          {"expr": "sum(rag_queries_total)"}
+        ]
+      },
+      {
+        "title": "Errors",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+        "targets": [
+          {"expr": "sum(rag_errors_total)"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "red", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Chunks Retrieved per Query",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(rag_chunks_retrieved_bucket[5m]))",
+            "legendFormat": "median"
+          }
+        ]
+      },
+      {
+        "title": "Tokens per Generation",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(rag_tokens_used_bucket[5m]))",
+            "legendFormat": "median tokens"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  # ── RAG Application ───────────────────────────────
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+      - .env.example
+    volumes:
+      # Hot reload during development
+      - ./core:/app/core
+      - ./api:/app/api
+      - ./ingestion:/app/ingestion
+      - ./retrieval:/app/retrieval
+      - ./generation:/app/generation
+      - ./observability:/app/observability
+      - ./config:/app/config
+      # Document ingestion directory
+      - ./sample_docs:/data/documents
+    depends_on:
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Vector Database ───────────────────────────────
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Local LLM ────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          memory: 4G
+    entrypoint: >
+      sh -c "ollama serve &
+             sleep 5 &&
+             ollama pull llama3.1:8b;
+             wait"
+
+  # ── Metrics ──────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  # ── Dashboards ───────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    depends_on:
+      - prometheus
+
+volumes:
+  chroma_data:
+  ollama_data:
+  prometheus_data:
+  grafana_data:
